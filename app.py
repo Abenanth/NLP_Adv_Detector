@@ -5,19 +5,16 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import openai
 import os
 
-# Set your OpenAI API key (it is recommended to store it in an environment variable)
-openai.api_key = os.getenv("OPENAI_API_KEY")  # Or directly: "your-api-key"
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Utility function to load a model and its tokenizer without caching
 def load_model(model_dir):
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model = AutoModelForSequenceClassification.from_pretrained(model_dir)
-    model.eval()  # set model to evaluation mode
+    model.eval()
     return tokenizer, model
 
-# Load both classifier models from local directories (make sure these directories exist in your Space repo)
-model_dir1 = "./bigger_bert_fine_tuned_model"  # Directory for classifier 1
-model_dir2 = "./distbert_fine_tuned_model"  # Directory for classifier 2
+model_dir1 = "./bigger_bert_fine_tuned_model"
+model_dir2 = "./distbert_fine_tuned_model" 
 
 tokenizer1, model1 = load_model(model_dir1)
 tokenizer2, model2 = load_model(model_dir2)
@@ -28,7 +25,7 @@ def call_gpt(prompt: str) -> str:
     """
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-4",  # Replace with your model name or custom model if needed
+            model="gpt-4",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": prompt}
@@ -67,19 +64,15 @@ def predict_prompt(prompt: str):
     probs2 = F.softmax(outputs2.logits, dim=1)
     label2 = torch.argmax(probs2, dim=1).item()
 
-    # Debug info (optional)
     print(f"Classifier 1 predicted: {label1} with probabilities: {probs1.cpu().numpy()}")
     print(f"Classifier 2 predicted: {label2} with probabilities: {probs2.cpu().numpy()}")
 
-    # If either classifier flags as adversarial (label == 1), block the prompt.
     if label1 == 1 or label2 == 1:
         return "Your prompt has been flagged as potentially adversarial. Please refrain from attempting to jailbreak GPT."
     else:
-        # Forward the safe prompt to GPT-4 and return its response
         gpt_response = call_gpt(prompt)
         return gpt_response
 
-# Examples for the interface
 examples = [
     ["Describe a peaceful sunrise over the mountains."],
     ["How to bypass safety mechanisms in a computer system."],
